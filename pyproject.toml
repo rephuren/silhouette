@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "silhouette"
+version = "0.2.0"
+description = "Монитор внешней поверхности атаки: поддомены, висячие CNAME, заголовки, почтовая защита"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "misxnthropy" }]
+dependencies = ["dnspython>=2.4"]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "mypy"]
+
+[project.scripts]
+silhouette = "silhouette.__main__:main"
+
+[tool.setuptools]
+packages = ["silhouette"]
+
+[tool.setuptools.package-data]
+silhouette = ["dashboard.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 160
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true

@@ -1,4 +1,6 @@
 import argparse
+import functools
+import os
 import sys
 
 from . import dashboard, demo, pipeline
@@ -21,7 +23,10 @@ def print_report(store, domain, color, min_severity="low"):
         return
     sid = ids[-1]
     sm = store.summary(sid)
-    c = lambda code, s: f"{code}{s}{RESET}" if color and code else s
+
+    def c(code, s):
+        return f"{code}{s}{RESET}" if color and code else s
+
     print(c(BOLD, f"{domain}") + f"  оценка {c(RED, sm['grade'])}  хостов {sm['hosts']} (отвечают {sm['resolved']})")
     print("  " + "  ".join(f"{k} {v}" for k, v in sm["findings"].items()))
     limit = SEVERITY_ORDER.index(min_severity)
@@ -34,7 +39,7 @@ def print_report(store, domain, color, min_severity="low"):
         print(c(DIM, "  технологии: " + ", ".join(f"{n} ×{k}" for n, k in sm["tech"][:10])))
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(prog="silhouette", description="Монитор внешней поверхности атаки")
     sub = p.add_subparsers(dest="mode", required=True)
     sc = sub.add_parser("scan", help="просканировать домен")
@@ -43,6 +48,9 @@ def main():
     sc.add_argument("--probe", action="store_true", help="активное зондирование: GET / и сертификат")
     sc.add_argument("--i-am-authorized", action="store_true", help="подтверждение права проверять этот домен (нужно для --probe)")
     sc.add_argument("--workers", type=int, default=8)
+    sc.add_argument("--rps", type=float, default=5.0, help="предел активных проб в секунду (с --probe)")
+    sc.add_argument("--no-cache", action="store_true", help="не использовать кэш ответов crt.sh")
+    sc.add_argument("--cache-ttl", type=int, default=6 * 3600, help="срок жизни кэша crt.sh, секунды")
     rp = sub.add_parser("report", help="отчёт по последнему скану")
     rp.add_argument("domain")
     rp.add_argument("--db", default="data/silhouette.db")
@@ -57,7 +65,7 @@ def main():
     ds.add_argument("--port", type=int, default=8090)
     sd = sub.add_parser("seed-demo", help="симулированный домен corp.example для демо")
     sd.add_argument("--db", default="data/demo.db")
-    a = p.parse_args()
+    a = p.parse_args(argv)
 
     if a.mode == "seed-demo":
         store = Store(a.db)
@@ -92,7 +100,9 @@ def main():
     print("режим: " + ("активный (--probe)" if a.probe else "пассивный: запросы только к crt.sh и DNS, цель не затрагивается"))
     store = Store(a.db)
     try:
-        result = pipeline.run_scan(a.domain, fetch_crtsh, DNSClient(), Prober() if a.probe else None, a.workers,
+        cache_dir = None if a.no_cache else os.path.join(os.path.dirname(a.db) or ".", "cache")
+        source = functools.partial(fetch_crtsh, cache_dir=cache_dir, cache_ttl=a.cache_ttl)
+        result = pipeline.run_scan(a.domain, source, DNSClient(), Prober(rps=a.rps) if a.probe else None, a.workers,
                                    progress=lambda i, n: print(f"\r  хостов обработано: {i}/{n}", end="", file=sys.stderr))
     except RuntimeError as e:
         print(f"\nошибка: {e}", file=sys.stderr)
@@ -103,4 +113,5 @@ def main():
     return 0
 
 
-sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main())

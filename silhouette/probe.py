@@ -3,9 +3,11 @@
 import ipaddress
 import socket
 import ssl
+import threading
 import time
 import urllib.error
 import urllib.request
+from typing import Any
 
 from .fingerprint import extract_title
 from .models import ProbeResult
@@ -34,8 +36,11 @@ def _cert_info(host, timeout):
         with socket.create_connection((host, 443), timeout=timeout) as raw:
             with ctx.wrap_socket(raw, server_hostname=host) as tls:
                 cert = tls.getpeercert()
-        days = int((ssl.cert_time_to_seconds(cert["notAfter"]) - time.time()) // 86400)
-        issuer = dict(x[0] for x in cert.get("issuer", ())).get("commonName")
+        if not cert:
+            return None, None, None
+        info: Any = cert
+        days = int((ssl.cert_time_to_seconds(info["notAfter"]) - time.time()) // 86400)
+        issuer = dict(x[0] for x in info.get("issuer", ())).get("commonName")
         return None, days, issuer
     except ssl.SSLCertVerificationError as e:
         return (e.verify_message or str(e)), None, None
@@ -44,12 +49,28 @@ def _cert_info(host, timeout):
 
 
 class Prober:
-    def __init__(self, timeout=6.0):
+    def __init__(self, timeout=6.0, rps=5.0, sleep=time.sleep, clock=time.monotonic):
         self.timeout = timeout
+        self.interval = 1.0 / rps if rps and rps > 0 else 0.0
+        self._sleep, self._clock = sleep, clock
+        self._lock = threading.Lock()
+        self._next = 0.0
+
+    def _throttle(self):
+        """Не больше rps проб в секунду на весь скан, сколько бы ни было потоков."""
+        if not self.interval:
+            return
+        with self._lock:
+            now = self._clock()
+            wait = self._next - now
+            self._next = max(now, self._next) + self.interval
+        if wait > 0:
+            self._sleep(wait)
 
     def probe(self, host, ips) -> ProbeResult:
         if not any(is_public(ip) for ip in ips):
             return ProbeResult(error="нет публичных IP, пропущено")
+        self._throttle()
         result = ProbeResult()
         opener_ctx = ssl.create_default_context()
         opener_ctx.check_hostname = False

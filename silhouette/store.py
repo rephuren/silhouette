@@ -2,7 +2,6 @@
 import json
 import os
 import sqlite3
-from dataclasses import asdict
 
 from .models import SEVERITY_ORDER, SEVERITY_WEIGHT
 
@@ -47,6 +46,7 @@ class Store:
         for f in result.domain_findings:
             self.db.execute("INSERT INTO findings VALUES (?,?,?,?,?)", (sid, f.host, f.severity, f.code, f.message))
         self.db.commit()
+        assert sid is not None
         return sid
 
     def domains(self):
@@ -84,7 +84,7 @@ class Store:
         for f in findings:
             counts[f["severity"]] += 1
         resolved = sum(1 for h in hosts if h["status"] == "ok")
-        tech = {}
+        tech: dict[str, int] = {}
         for h in hosts:
             for t in h["tech"]:
                 tech[t["name"]] = tech.get(t["name"], 0) + 1
@@ -99,7 +99,10 @@ class Store:
         old, new = ids[-2], ids[-1]
         h_old = {h["name"]: h for h in self.hosts(old)}
         h_new = {h["name"]: h for h in self.hosts(new)}
-        f_key = lambda f: (f["host"], f["code"], f["message"])
+
+        def f_key(f):
+            return (f["host"], f["code"], f["message"])
+
         f_old = {f_key(f) for f in self.findings(old)}
         changed = [{"host": n, "old": h_old[n]["ips"], "new": h_new[n]["ips"]}
                    for n in h_new if n in h_old and h_old[n]["ips"] != h_new[n]["ips"]]

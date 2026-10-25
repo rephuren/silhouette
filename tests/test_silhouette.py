@@ -205,7 +205,10 @@ def test_dashboard_api(tmp_path):
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), dashboard.make_handler(db))
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
-    get = lambda p: urllib.request.urlopen(base + p).read()
+
+    def get(p):
+        return urllib.request.urlopen(base + p).read()
+
     try:
         assert b"SILHOUETTE" in get("/")
         assert json.loads(get("/api/domains"))[0]["domain"] == D

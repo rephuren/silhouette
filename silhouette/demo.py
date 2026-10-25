@@ -127,8 +127,9 @@ def build(stage=1):
 
 
 def seed(store):
-    from .pipeline import run_scan
     import time
+
+    from .pipeline import run_scan
     ids = []
     for stage in (1, 2):
         dns, prober, source = build(stage)

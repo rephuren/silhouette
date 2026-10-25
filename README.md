@@ -5,6 +5,8 @@
 **Монитор внешней поверхности атаки.**
 Показывает, что о вашем домене видно снаружи, что в нём слабое и что изменилось с прошлого скана.
 
+![tests](https://img.shields.io/github/actions/workflow/status/rephuren/silhouette/ci.yml?style=flat-square&labelColor=050505&label=tests) ![python](https://img.shields.io/badge/python-3.10%2B-050505?style=flat-square&labelColor=050505&color=b3000f) ![license](https://img.shields.io/badge/license-MIT-050505?style=flat-square&labelColor=050505&color=b3000f)
+
 </div>
 
 ## Зачем это
@@ -13,8 +15,24 @@
 
 <div align="center">
 <img src="assets/dashboard.png" alt="дашборд silhouette" width="100%"/>
-<sub>дашборд на симулированном домене <code>corp.example</code> (зарезервированный TLD, реальных адресов нет): подставные DNS и сайты проходят через настоящий конвейер</sub>
+<sub>дашборд на симулированном домене <code>corp.example</code> (зарезервированный TLD, реальных адресов нет): подставные DNS и сайты проходят через настоящий конвейер. Полная страница: <a href="assets/dashboard-full.png">dashboard-full.png</a></sub>
 </div>
+
+## Быстрый старт
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install .
+.venv/bin/silhouette scan example.org                           # пассивно
+.venv/bin/silhouette scan example.org --probe --i-am-authorized  # с зондированием своего домена
+.venv/bin/silhouette report example.org --min-severity medium
+.venv/bin/silhouette diff example.org                           # что изменилось с прошлого скана
+.venv/bin/silhouette dashboard                                  # http://127.0.0.1:8090
+.venv/bin/silhouette seed-demo --db data/demo.db                # симулированный домен для демо
+```
+
+Без установки то же самое делает `python3 -m silhouette …`. Для разработки: `pip install -e ".[dev]"`, затем `pytest`, `ruff check .`, `mypy silhouette`.
+
+**Вежливость к внешним сервисам.** Ответы crt.sh кэшируются на диск на 6 часов (`--cache-ttl`, `--no-cache`), запросы к нему идут не чаще одного в 1,5 секунды, а на ответы 429/503 инструмент ждёт столько, сколько указано в `Retry-After` (не дольше минуты), иначе повторяет с нарастающей паузой и случайной добавкой. Активные пробы ограничены `--rps` (по умолчанию 5 в секунду на весь скан, сколько бы ни было потоков).
 
 ## Что проверяется
 
@@ -25,28 +43,18 @@
 
 Результаты складываются в SQLite: оценка по хостам, граф связей хост → CNAME → IP, дифф между сканами.
 
-## Правила использования
+## Безопасность и этика
 
 - **Только свои домены или те, на проверку которых есть письменное разрешение.** Пассивный режим ходит к crt.sh и DNS-резолверу, а цель не затрагивает.
 - Активный режим включается флагом `--probe` и **требует** `--i-am-authorized`, иначе инструмент отказывается работать.
 - Зондирование сводится к одному `GET /` и проверке сертификата на хост, без перебора путей, без эксплуатации. Хосты с внутренними или документационными IP пропускаются. Редиректы не выполняются.
 
-## Запуск
-
-```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m silhouette scan example.org                          # пассивно
-.venv/bin/python -m silhouette scan example.org --probe --i-am-authorized # с зондированием своего домена
-.venv/bin/python -m silhouette report example.org --min-severity medium
-.venv/bin/python -m silhouette diff example.org                          # что изменилось с прошлого скана
-.venv/bin/python -m silhouette dashboard                                 # http://127.0.0.1:8090
-.venv/bin/python -m silhouette seed-demo --db data/demo.db               # симулированный домен для демо
-.venv/bin/python -m pytest
-```
-
 ## Как проверялось
 
-- 27 тестов: разбор crt.sh и повторы при сбоях, цепочки CNAME и висячие записи, SPF/DMARC на шести сценариях, версии ПО, заголовки, граф, дифф между сканами, API дашборда и 404 на подозрительные пути.
+- 45 тестов: разбор crt.sh и повторы при сбоях, цепочки CNAME и висячие записи, SPF/DMARC на шести сценариях, версии ПО, заголовки, граф, дифф между сканами, API дашборда и 404 на подозрительные пути.
+- Сбои сети и ответов: Retry-After числом и датой, мусорный Retry-After, HTML вместо JSON, JSON не того вида, записи не-словари, огромные имена, повреждённый и просроченный кэш, попытка выйти из папки кэша через `../` в имени домена, таймауты и SERVFAIL у DNS, зацикленные CNAME, система без `resolv.conf` (клиент берёт публичные резолверы).
+- Ограничение скорости проб проверяется на подменённых часах: каждая следующая проба стартует через 1/rps секунды.
+- В CI на каждый коммит: `ruff`, `mypy` и тесты на Python 3.10, 3.12 и 3.14.
 - Пока я проверял, нашёл ошибку: `ipaddress.is_private` в Python считает «приватными» ещё и документационные диапазоны, поэтому демо-адреса ложно помечались как внутренние. Проверка переписана на явные RFC1918, loopback и link-local.
 - Дашборд выводит данные из внешнего мира только через `textContent`, и в тестах проверено, что строки вида `<img onerror=…>` хранятся как текст.
 

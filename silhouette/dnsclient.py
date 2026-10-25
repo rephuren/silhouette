@@ -5,13 +5,18 @@ import dns.resolver
 from .models import DNSResult
 
 MAX_CHAIN = 8
+FALLBACK_NAMESERVERS = ["1.1.1.1", "9.9.9.9"]
 
 
 class DNSClient:
     """lookup(name, rtype) -> (status, [значения]); status: ok | nxdomain | noanswer | error."""
 
     def __init__(self, timeout=4.0, nameservers=None):
-        self.resolver = dns.resolver.Resolver()
+        try:
+            self.resolver = dns.resolver.Resolver()
+        except dns.resolver.NoResolverConfiguration:  # контейнер или система без resolv.conf: берём публичные резолверы
+            self.resolver = dns.resolver.Resolver(configure=False)
+            self.resolver.nameservers = list(FALLBACK_NAMESERVERS)
         self.resolver.lifetime = timeout
         self.resolver.timeout = timeout
         if nameservers:

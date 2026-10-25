@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from . import checks, fingerprint
 from .dnsclient import resolve_host
-from .models import HIGH, LOW, MEDIUM, Finding, HostRecord, ProbeResult, ScanResult
+from .models import HIGH, MEDIUM, Finding, HostRecord, ProbeResult, ScanResult
 
 
 def _apply_probe(rec: HostRecord, probe: ProbeResult):
@@ -22,7 +22,8 @@ def _apply_probe(rec: HostRecord, probe: ProbeResult):
         rec.findings.append(Finding(MEDIUM, "tls-expiring", f"сертификат истекает через {probe.tls_days_left} дн.", rec.name))
     tokens = {t for t in checks.SERVICE_NAME_TOKENS if t in rec.name.split(".", 1)[0].replace("-", ".").split(".")}
     if tokens and probe.status and 200 <= probe.status < 400:
-        rec.findings.append(Finding(MEDIUM, "service-exposed", f"служебный хост ({', '.join(sorted(tokens))}) отвечает из интернета (HTTP {probe.status})", rec.name))
+        names = ", ".join(sorted(tokens))
+        rec.findings.append(Finding(MEDIUM, "service-exposed", f"служебный хост ({names}) отвечает из интернета (HTTP {probe.status})", rec.name))
 
 
 def scan_host(name, meta, dns_client, prober):
