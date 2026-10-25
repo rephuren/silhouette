@@ -62,3 +62,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 - источники Shodan и Censys по API-ключу из переменной окружения
 - выгрузка отчёта в HTML и Markdown
 - уведомления при появлении high-находок
+
+## Лицензия
+
+MIT, см. [LICENSE](LICENSE).
