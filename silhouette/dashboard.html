@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>umbra</title>
+<title>silhouette</title>
 <style>
   :root { --bg:#050505; --panel:#0a0a0a; --line:#1a1a1a; --text:#e8e8e8; --dim:#8a8a8a; --faint:#4a4a4a; --red:#b3000f; --red-hi:#e0102a; }
   * { box-sizing: border-box; }
@@ -67,7 +67,7 @@
 <body>
 <main>
   <header>
-    <h1 data-t="UMBRA">UMBRA</h1>
+    <h1 data-t="SILHOUETTE">SILHOUETTE</h1>
     <label>домен <select id="domain"></select></label>
   </header>
   <p class="lead">Показывает, что о вашем домене видно снаружи: поддомены, технологии, висячие записи, слабые заголовки и почтовая защита. Что изменилось с прошлого скана, и где слабое место.</p>
@@ -246,7 +246,7 @@
     domains.forEach((d) => sel.append(el("option", "", d.domain)));
     sel.addEventListener("change", () => load(sel.value));
     if (domains.length) load(domains[0].domain);
-    else $("diff").append(el("div", "empty", "сканов пока нет: umbra scan <домен>"));
+    else $("diff").append(el("div", "empty", "сканов пока нет: silhouette scan <домен>"));
   }
   init();
 </script>

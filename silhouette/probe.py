@@ -10,7 +10,7 @@ import urllib.request
 from .fingerprint import extract_title
 from .models import ProbeResult
 
-UA = "umbra/0.1 (authorized security assessment)"
+UA = "silhouette/0.1 (authorized security assessment)"
 MAX_BODY = 64 * 1024
 
 

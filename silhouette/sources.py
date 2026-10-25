@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 
 CRT_URL = "https://crt.sh/?q={q}&output=json"
-UA = "umbra/0.1 (passive CT lookup)"
+UA = "silhouette/0.1 (passive CT lookup)"
 LABEL_RE = re.compile(r"^[a-z0-9_]([a-z0-9_\-]{0,61}[a-z0-9_])?$")
 
 

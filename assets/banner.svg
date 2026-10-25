@@ -25,15 +25,15 @@
   <g class="noise" fill="#d9d9d9" opacity="0.5" font-size="11">
     <text x="30"  y="40">¦░▒▓█ 0x7F454C46 ░▒▓ ÷╪╫ ░▒</text>
     <text x="860" y="52">Ñ¤ÞÞ ▓▒░ 0xDEADC0DE ░░▒▓█</text>
-    <text x="40"  y="296">&gt; umbra scan corp.example</text>
+    <text x="40"  y="296">&gt; silhouette scan corp.example</text>
     <text x="840" y="290">0x554D4252</text>
   </g>
 
   <g class="red">
-    <text x="600" y="172" text-anchor="middle" font-size="92" font-weight="700" fill="#b3000f" letter-spacing="30">UMBRA</text>
+    <text x="600" y="172" text-anchor="middle" font-size="92" font-weight="700" fill="#b3000f" letter-spacing="30">SILHOUETTE</text>
   </g>
   <g class="ghost">
-    <text x="600" y="172" text-anchor="middle" font-size="92" font-weight="700" fill="#e8e8e8" letter-spacing="30">UMBRA</text>
+    <text x="600" y="172" text-anchor="middle" font-size="92" font-weight="700" fill="#e8e8e8" letter-spacing="30">SILHOUETTE</text>
   </g>
 
   <text x="600" y="214" text-anchor="middle" font-size="15" fill="#8a8a8a" letter-spacing="9">ATTACK SURFACE  ·  PASSIVE FIRST  ·  DIFF</text>

@@ -6,11 +6,11 @@ from http.server import ThreadingHTTPServer
 
 import pytest
 
-from umbra import checks, dashboard, demo, fingerprint, pipeline, sources
-from umbra.dnsclient import resolve_host
-from umbra.models import ProbeResult
-from umbra.probe import Prober, is_public
-from umbra.store import Store, grade
+from silhouette import checks, dashboard, demo, fingerprint, pipeline, sources
+from silhouette.dnsclient import resolve_host
+from silhouette.models import ProbeResult
+from silhouette.probe import Prober, is_public
+from silhouette.store import Store, grade
 
 D = "corp.example"
 
@@ -71,13 +71,13 @@ def test_takeover_candidate_vs_plain_dangling():
 
 
 def test_internal_ip_flags_rfc1918_but_not_documentation_ranges():
-    from umbra.models import DNSResult
+    from silhouette.models import DNSResult
     assert "internal-ip-in-dns" in codes(checks.check_dns_host("a.corp.example", DNSResult([], ["10.1.2.3"], "ok")))
     assert "internal-ip-in-dns" not in codes(checks.check_dns_host("a.corp.example", DNSResult([], ["203.0.113.9"], "ok")))
 
 
 def test_service_name_token():
-    from umbra.models import DNSResult
+    from silhouette.models import DNSResult
     assert "service-name" in codes(checks.check_dns_host("jenkins.corp.example", DNSResult([], ["203.0.113.9"], "ok")))
     assert "service-name" not in codes(checks.check_dns_host("www.corp.example", DNSResult([], ["203.0.113.9"], "ok")))
 
@@ -207,7 +207,7 @@ def test_dashboard_api(tmp_path):
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     get = lambda p: urllib.request.urlopen(base + p).read()
     try:
-        assert b"UMBRA" in get("/")
+        assert b"SILHOUETTE" in get("/")
         assert json.loads(get("/api/domains"))[0]["domain"] == D
         sm = json.loads(get(f"/api/summary/{D}"))
         assert sm["hosts"] == 29 and sm["findings"]["high"] >= 4

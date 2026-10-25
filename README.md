@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="umbra" width="100%"/>
+<img src="assets/banner.svg" alt="silhouette" width="100%"/>
 
 **Монитор внешней поверхности атаки.**
 Показывает, что о вашем домене видно снаружи, что в нём слабое и что изменилось с прошлого скана.
@@ -9,10 +9,10 @@
 
 ## Зачем это
 
-Всё, что атакующий узнаёт о вас, не касаясь ваших серверов: поддомены из публичных журналов сертификатов, забытые DNS-записи, устаревшее ПО, служебные хосты, торчащие в интернет, слабая почтовая защита. `umbra` собирает это в одну картину, ставит оценку A–F и при каждом новом скане показывает дифф: что появилось, что исчезло и что исправлено.
+Всё, что атакующий узнаёт о вас, не касаясь ваших серверов: поддомены из публичных журналов сертификатов, забытые DNS-записи, устаревшее ПО, служебные хосты, торчащие в интернет, слабая почтовая защита. `silhouette` собирает это в одну картину, ставит оценку A–F и при каждом новом скане показывает дифф: что появилось, что исчезло и что исправлено.
 
 <div align="center">
-<img src="assets/dashboard.png" alt="дашборд umbra" width="100%"/>
+<img src="assets/dashboard.png" alt="дашборд silhouette" width="100%"/>
 <sub>дашборд на симулированном домене <code>corp.example</code> (зарезервированный TLD, реальных адресов нет): подставные DNS и сайты проходят через настоящий конвейер</sub>
 </div>
 
@@ -35,12 +35,12 @@
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m umbra scan example.org                          # пассивно
-.venv/bin/python -m umbra scan example.org --probe --i-am-authorized # с зондированием своего домена
-.venv/bin/python -m umbra report example.org --min-severity medium
-.venv/bin/python -m umbra diff example.org                          # что изменилось с прошлого скана
-.venv/bin/python -m umbra dashboard                                 # http://127.0.0.1:8090
-.venv/bin/python -m umbra seed-demo --db data/demo.db               # симулированный домен для демо
+.venv/bin/python -m silhouette scan example.org                          # пассивно
+.venv/bin/python -m silhouette scan example.org --probe --i-am-authorized # с зондированием своего домена
+.venv/bin/python -m silhouette report example.org --min-severity medium
+.venv/bin/python -m silhouette diff example.org                          # что изменилось с прошлого скана
+.venv/bin/python -m silhouette dashboard                                 # http://127.0.0.1:8090
+.venv/bin/python -m silhouette seed-demo --db data/demo.db               # симулированный домен для демо
 .venv/bin/python -m pytest
 ```
 
