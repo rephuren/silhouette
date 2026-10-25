@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "misxnthropy" }]
-dependencies = ["dnspython>=2.4"]
+dependencies = ["dnspython>=2.8.0"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "mypy"]
