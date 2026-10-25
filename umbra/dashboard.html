@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>umbra</title>
+<style>
+  :root { --bg:#050505; --panel:#0a0a0a; --line:#1a1a1a; --text:#e8e8e8; --dim:#8a8a8a; --faint:#4a4a4a; --red:#b3000f; --red-hi:#e0102a; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin:0; color:var(--text); background:var(--bg); font:13px/1.5 "SF Mono","JetBrains Mono",Menlo,Consolas,monospace; min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:50; background:repeating-linear-gradient(to bottom, rgba(255,255,255,.035) 0 1px, transparent 1px 4px); }
+  body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:49; background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.85) 100%); }
+  main { max-width:1240px; margin:0 auto; padding:28px 20px 60px; position:relative; z-index:1; }
+  header { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+  h1 { margin:0; font-size:46px; letter-spacing:.32em; font-weight:700; position:relative; text-transform:uppercase; }
+  h1::before, h1::after { content:attr(data-t); position:absolute; left:0; top:0; pointer-events:none; opacity:0; }
+  h1::before { color:var(--red); animation:ga 5s infinite steps(1); }
+  h1::after { color:var(--faint); animation:gb 5s infinite steps(1); }
+  @keyframes ga { 0%,93%,100% { opacity:0; transform:none } 94% { opacity:.9; transform:translate(6px,-2px) } 96% { opacity:.9; transform:translate(-5px,1px) } }
+  @keyframes gb { 0%,94%,100% { opacity:0; transform:none } 95% { opacity:.8; transform:translate(-7px,1px) } 97% { opacity:.6; transform:translate(4px,-1px) } }
+  select { background:var(--panel); color:var(--text); border:1px solid var(--line); padding:5px 10px; font:inherit; }
+  .lead { color:var(--dim); max-width:780px; margin:0 0 22px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:12px; }
+  .card, .panel { background:var(--panel); border:1px solid var(--line); padding:14px 16px; }
+  .card .k { color:var(--dim); font-size:11px; letter-spacing:.18em; text-transform:uppercase; }
+  .card .v { font-size:34px; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .card.hot .v { color:var(--red-hi); }
+  .grade { font-size:64px !important; line-height:1; letter-spacing:.05em; }
+  .panel h2 { margin:0 0 12px; font-size:11px; font-weight:400; color:var(--dim); letter-spacing:.22em; text-transform:uppercase; }
+  .panel h2::before { content:"▓ "; color:var(--red); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:12px; margin-top:12px; }
+  .wide { margin-top:12px; }
+  .rows { display:grid; gap:4px; }
+  .row { position:relative; display:grid; grid-template-columns:1fr auto; gap:12px; padding:3px 8px; overflow:hidden; }
+  .row .bar { position:absolute; left:0; top:0; bottom:0; background:rgba(179,0,15,.18); border-right:1px solid var(--red); z-index:0; }
+  .row .name, .row .n { position:relative; z-index:1; }
+  .row .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row .n { color:var(--dim); }
+  .row.click { cursor:pointer; } .row.click:hover .name { color:#fff; }
+  .empty { color:var(--faint); padding:3px 8px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .chip { border:1px solid var(--line); background:none; color:var(--dim); padding:2px 10px; font:inherit; cursor:pointer; }
+  .chip.on { border-color:var(--red); color:var(--text); }
+  .f { display:grid; grid-template-columns:70px 210px 1fr; gap:10px; padding:3px 0; border-bottom:1px solid #101010; }
+  .f .sev { text-transform:uppercase; font-size:11px; letter-spacing:.1em; color:var(--dim); }
+  .f.critical .sev, .f.high .sev { color:var(--red-hi); font-weight:700; } .f.medium .sev { color:var(--text); }
+  .f .h { color:var(--dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; } .f .h:hover { color:#fff; }
+  .scroll { max-height:340px; overflow:auto; }
+  svg.graph { width:100%; display:block; }
+  .graph text { fill:var(--dim); font:13px "SF Mono",Menlo,monospace; } .graph .hi { fill:var(--red-hi); font-weight:700; }
+  .graph .ed { stroke:#2a2a2a; fill:none; stroke-width:1; } .graph .ed.hot { stroke:var(--red); }
+  .graph .col { fill:var(--faint); letter-spacing:.18em; }
+  .diff h3 { margin:10px 0 4px; font-size:11px; font-weight:400; color:var(--dim); letter-spacing:.14em; text-transform:uppercase; }
+  .plus { color:var(--red-hi); } .minus { color:var(--faint); text-decoration:line-through; }
+  #drawer { position:fixed; top:0; right:0; bottom:0; width:min(560px,100vw); background:#070707; border-left:1px solid var(--red); z-index:60; transform:translateX(105%); transition:transform .18s; padding:18px 18px 40px; overflow:auto; }
+  #drawer.open { transform:none; }
+  #drawer h3 { margin:0 0 4px; font-size:14px; letter-spacing:.14em; word-break:break-all; }
+  #drawer .meta { color:var(--dim); margin-bottom:14px; word-break:break-all; }
+  #drawer button { position:absolute; right:14px; top:12px; background:none; color:var(--dim); border:1px solid var(--line); padding:2px 10px; font:inherit; cursor:pointer; }
+  #drawer button:hover { color:var(--text); border-color:var(--red); }
+  .kv { display:grid; grid-template-columns:110px 1fr; gap:8px; padding:3px 0; border-bottom:1px solid #101010; } .kv .k { color:var(--faint); } .kv .v { word-break:break-all; }
+  footer { margin-top:34px; color:var(--faint); font-size:11px; text-align:center; letter-spacing:.1em; }
+  @media (max-width:520px) { h1 { font-size:30px; } .grid { grid-template-columns:1fr; } .f { grid-template-columns:60px 1fr; } .f .h { display:none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 data-t="UMBRA">UMBRA</h1>
+    <label>домен <select id="domain"></select></label>
+  </header>
+  <p class="lead">Показывает, что о вашем домене видно снаружи: поддомены, технологии, висячие записи, слабые заголовки и почтовая защита. Что изменилось с прошлого скана, и где слабое место.</p>
+
+  <section class="cards">
+    <div class="card"><div class="k">оценка</div><div class="v grade" id="c-grade">·</div></div>
+    <div class="card"><div class="k">хостов</div><div class="v" id="c-hosts">0</div></div>
+    <div class="card"><div class="k">отвечают</div><div class="v" id="c-resolved">0</div></div>
+    <div class="card hot"><div class="k">critical + high</div><div class="v" id="c-hot">0</div></div>
+    <div class="card"><div class="k">medium</div><div class="v" id="c-medium">0</div></div>
+    <div class="card"><div class="k">low</div><div class="v" id="c-low">0</div></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>карта поверхности атаки</h2>
+    <svg class="graph" id="graph"></svg>
+  </section>
+
+  <section class="grid">
+    <div class="panel diff"><h2>что изменилось с прошлого скана</h2><div id="diff"></div></div>
+    <div class="panel"><h2>самые рискованные хосты</h2><div class="rows" id="hosts"></div></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>находки</h2>
+    <div class="chips" id="chips"></div>
+    <div class="scroll" id="findings"></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel"><h2>технологии</h2><div class="rows" id="tech"></div></div>
+    <div class="panel"><h2>издатели сертификатов</h2><div class="rows" id="issuers"></div></div>
+  </section>
+
+  <footer>░▒▓█  вы видите то же, что видит атакующий  █▓▒░</footer>
+</main>
+
+<aside id="drawer">
+  <button id="close">закрыть</button>
+  <h3 id="d-title"></h3>
+  <div class="meta" id="d-meta"></div>
+  <div id="d-body"></div>
+</aside>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+  const getJSON = (u) => fetch(u, { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  const SEV = ["critical", "high", "medium", "low", "info"];
+  let state = { domain: null, filter: "high", findings: [] };
+
+  function rows(id, list, onClick) {
+    const box = $(id); box.replaceChildren();
+    if (!list.length) { box.append(el("div", "empty", "пусто")); return; }
+    const max = Math.max(1, ...list.map((r) => r[1]));
+    for (const [name, n] of list) {
+      const row = el("div", "row" + (onClick ? " click" : ""));
+      const bar = el("div", "bar"); bar.style.width = (n / max * 100) + "%";
+      row.append(bar, el("div", "name", name), el("div", "n", n));
+      if (onClick) row.addEventListener("click", () => onClick(name));
+      box.append(row);
+    }
+  }
+
+  function renderGraph(g) {
+    const svg = $("graph"); svg.replaceChildren();
+    const NS = "http://www.w3.org/2000/svg";
+    const mk = (t, a, txt) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (txt !== undefined) e.textContent = txt; return e; };
+    const ROW = 20, TOP = 34, W = 1200, X = { host: 10, cname: 520, ip: 980 }, LABEL_W = 300;
+    const hosts = g.nodes.filter((n) => n.kind === "host");
+    const pos = {};
+    hosts.forEach((n, i) => { pos[n.id] = TOP + i * ROW; });
+    const neighbors = {};
+    for (const [a, b] of g.edges) { (neighbors[a] ||= []).push(b); (neighbors[b] ||= []).push(a); }
+    const place = (kind) => {
+      const list = g.nodes.filter((n) => n.kind === kind).map((n) => {
+        const ys = (neighbors[n.id] || []).map((m) => pos[m]).filter((y) => y !== undefined);
+        return { n, want: ys.length ? ys.reduce((a, b) => a + b, 0) / ys.length : 0 };
+      }).sort((a, b) => a.want - b.want);
+      let prev = TOP - ROW;
+      for (const { n, want } of list) { prev = Math.max(prev + ROW, want); pos[n.id] = prev; }
+    };
+    place("cname");  // CNAME-цели зависят от хостов
+    place("ip");     // адреса зависят от хостов и CNAME
+    const H = Math.max(...Object.values(pos), TOP) + 30;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
+    const label = { host: "ХОСТЫ [РИСК]", cname: "ЦЕЛИ CNAME", ip: "АДРЕСА" };
+    for (const k of Object.keys(label)) svg.append(mk("text", { x: X[k], y: 14, class: "col" }, label[k]));
+    const kindOf = Object.fromEntries(g.nodes.map((n) => [n.id, n.kind]));
+    const hot = new Set(hosts.filter((n) => n.score >= 20).map((n) => n.id));
+    const right = (id) => X[kindOf[id]] + (kindOf[id] === "ip" ? 0 : LABEL_W);
+    for (const [a, b] of g.edges) {
+      if (pos[a] === undefined || pos[b] === undefined) continue;
+      const x1 = right(a), x2 = X[kindOf[b]] - 6, y1 = pos[a] - 4, y2 = pos[b] - 4, mid = (x1 + x2) / 2;
+      svg.append(mk("path", { class: "ed" + (hot.has(a) || hot.has(b) ? " hot" : ""), d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}` }));
+    }
+    for (const n of g.nodes) {
+      const text = n.kind === "host" && n.score ? `${n.id}  [${n.score}]` : n.id;
+      svg.append(mk("text", { x: X[n.kind], y: pos[n.id], class: hot.has(n.id) ? "hi" : "" }, text.slice(0, 40)));
+    }
+  }
+
+  function renderDiff(d) {
+    const box = $("diff"); box.replaceChildren();
+    if (!d || !d.new_scan) { box.append(el("div", "empty", "нужно два скана, чтобы сравнивать")); return; }
+    const section = (title, items, cls) => {
+      box.append(el("h3", "", `${title} (${items.length})`));
+      if (!items.length) { box.append(el("div", "empty", "—")); return; }
+      for (const t of items.slice(0, 14)) box.append(el("div", cls, t));
+    };
+    section("новые хосты", d.new_hosts, "plus");
+    section("исчезли", d.gone_hosts, "minus");
+    section("смена IP", d.ip_changes.map((c) => `${c.host}: ${c.old.join(",")} → ${c.new.join(",")}`), "");
+    section("новые находки", d.new_findings.map((f) => `[${f.severity}] ${f.host}: ${f.message}`), "plus");
+    section("исправлено", d.fixed_findings.map((f) => `[${f.severity}] ${f.host}: ${f.message}`), "minus");
+  }
+
+  function renderFindings() {
+    const chips = $("chips"); chips.replaceChildren();
+    const counts = {}; state.findings.forEach((f) => counts[f.severity] = (counts[f.severity] || 0) + 1);
+    const levels = { high: ["critical", "high"], medium: ["critical", "high", "medium"], low: ["critical", "high", "medium", "low"], all: SEV };
+    for (const [key, label] of [["high", "high+"], ["medium", "medium+"], ["low", "low+"], ["all", "все"]]) {
+      const b = el("button", "chip" + (state.filter === key ? " on" : ""), label);
+      b.addEventListener("click", () => { state.filter = key; renderFindings(); });
+      chips.append(b);
+    }
+    const box = $("findings"); box.replaceChildren();
+    const shown = state.findings.filter((f) => levels[state.filter].includes(f.severity));
+    if (!shown.length) box.append(el("div", "empty", "ничего на этом уровне"));
+    for (const f of shown) {
+      const row = el("div", "f " + f.severity);
+      const h = el("div", "h", f.host || state.domain); h.title = f.host || "";
+      if (f.host) h.addEventListener("click", () => openHost(f.host));
+      row.append(el("div", "sev", f.severity), h, el("div", "", f.message));
+      box.append(row);
+    }
+  }
+
+  async function openHost(name) {
+    const h = await getJSON(`/api/host/${state.domain}/${name}`);
+    $("d-title").textContent = h.name;
+    $("d-meta").textContent = `риск ${h.score}/100 · DNS: ${h.status}`;
+    const body = $("d-body"); body.replaceChildren();
+    const kv = (k, v) => { const r = el("div", "kv"); r.append(el("div", "k", k), el("div", "v", v)); body.append(r); };
+    kv("IP", h.ips.join(", ") || "—"); kv("CNAME", h.cnames.join(" → ") || "—");
+    kv("издатель", h.issuers.join(", ") || "—"); kv("впервые в CT", h.first_seen || "—");
+    kv("HTTP", h.http_status ? `${h.http_status}  ${h.title || ""}` : "не зондировался");
+    kv("сертификат", h.tls_days == null ? "—" : `${h.tls_days} дн. до истечения`);
+    kv("технологии", h.tech.map((t) => t.name + (t.version ? " " + t.version : "")).join(", ") || "—");
+    body.append(el("h3", "", "находки"));
+    if (!h.findings.length) body.append(el("div", "empty", "нет"));
+    for (const f of h.findings) { const r = el("div", "f " + f.severity); r.append(el("div", "sev", f.severity), el("div", "", ""), el("div", "", f.message)); body.append(r); }
+    $("drawer").classList.add("open");
+  }
+  $("close").addEventListener("click", () => $("drawer").classList.remove("open"));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("drawer").classList.remove("open"); });
+
+  async function load(domain) {
+    state.domain = domain;
+    const d = encodeURIComponent(domain);
+    const [sum, hosts, findings, diff, graph] = await Promise.all(["summary", "hosts", "findings", "diff", "graph"].map((k) => getJSON(`/api/${k}/${d}`)));
+    $("c-grade").textContent = sum.grade; $("c-grade").style.color = "ABCDF".indexOf(sum.grade) > 1 ? "var(--red-hi)" : "var(--text)";
+    $("c-hosts").textContent = sum.hosts; $("c-resolved").textContent = sum.resolved;
+    $("c-hot").textContent = sum.findings.critical + sum.findings.high; $("c-medium").textContent = sum.findings.medium; $("c-low").textContent = sum.findings.low;
+    renderGraph(graph); renderDiff(diff);
+    rows("hosts", hosts.filter((h) => h.score > 0).slice(0, 12).map((h) => [h.name, h.score]), openHost);
+    state.findings = findings; renderFindings();
+    rows("tech", sum.tech.slice(0, 12));
+    const issuers = {}; hosts.forEach((h) => h.issuers.forEach((i) => issuers[i] = (issuers[i] || 0) + 1));
+    rows("issuers", Object.entries(issuers).sort((a, b) => b[1] - a[1]));
+  }
+
+  async function init() {
+    const domains = await getJSON("/api/domains");
+    const sel = $("domain");
+    domains.forEach((d) => sel.append(el("option", "", d.domain)));
+    sel.addEventListener("change", () => load(sel.value));
+    if (domains.length) load(domains[0].domain);
+    else $("diff").append(el("div", "empty", "сканов пока нет: umbra scan <домен>"));
+  }
+  init();
+</script>
+</body>
+</html>

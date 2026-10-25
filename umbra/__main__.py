@@ -1,0 +1,106 @@
+import argparse
+import sys
+
+from . import dashboard, demo, pipeline
+from .dnsclient import DNSClient
+from .models import SEVERITY_ORDER
+from .probe import Prober
+from .sources import fetch_crtsh
+from .store import Store
+
+RED, DIM, BOLD, RESET = "\033[38;2;179;0;15m", "\033[2m", "\033[1m", "\033[0m"
+SEV_MARK = {"critical": ("▓▓", RED + BOLD), "high": ("▓", RED), "medium": ("▒", ""), "low": ("░", DIM), "info": ("·", DIM)}
+LEGAL = ("Активное зондирование отправляет HTTP/TLS-запросы на серверы цели. Используйте его только для доменов, "
+         "которыми вы владеете или на проверку которых у вас есть письменное разрешение.")
+
+
+def print_report(store, domain, color, min_severity="low"):
+    ids = store.scan_ids(domain)
+    if not ids:
+        print(f"по {domain} сканов нет")
+        return
+    sid = ids[-1]
+    sm = store.summary(sid)
+    c = lambda code, s: f"{code}{s}{RESET}" if color and code else s
+    print(c(BOLD, f"{domain}") + f"  оценка {c(RED, sm['grade'])}  хостов {sm['hosts']} (отвечают {sm['resolved']})")
+    print("  " + "  ".join(f"{k} {v}" for k, v in sm["findings"].items()))
+    limit = SEVERITY_ORDER.index(min_severity)
+    for f in store.findings(sid):
+        if SEVERITY_ORDER.index(f["severity"]) > limit:
+            continue
+        mark, code = SEV_MARK[f["severity"]]
+        print(f"  {c(code, mark):>3} {f['host'] or domain}: {f['message']}")
+    if sm["tech"]:
+        print(c(DIM, "  технологии: " + ", ".join(f"{n} ×{k}" for n, k in sm["tech"][:10])))
+
+
+def main():
+    p = argparse.ArgumentParser(prog="umbra", description="Монитор внешней поверхности атаки")
+    sub = p.add_subparsers(dest="mode", required=True)
+    sc = sub.add_parser("scan", help="просканировать домен")
+    sc.add_argument("domain")
+    sc.add_argument("--db", default="data/umbra.db")
+    sc.add_argument("--probe", action="store_true", help="активное зондирование: GET / и сертификат")
+    sc.add_argument("--i-am-authorized", action="store_true", help="подтверждение права проверять этот домен (нужно для --probe)")
+    sc.add_argument("--workers", type=int, default=8)
+    rp = sub.add_parser("report", help="отчёт по последнему скану")
+    rp.add_argument("domain")
+    rp.add_argument("--db", default="data/umbra.db")
+    rp.add_argument("--min-severity", default="low", choices=SEVERITY_ORDER)
+    rp.add_argument("--no-color", action="store_true")
+    df = sub.add_parser("diff", help="что изменилось с прошлого скана")
+    df.add_argument("domain")
+    df.add_argument("--db", default="data/umbra.db")
+    ds = sub.add_parser("dashboard", help="локальный веб-дашборд")
+    ds.add_argument("--db", default="data/umbra.db")
+    ds.add_argument("--host", default="127.0.0.1")
+    ds.add_argument("--port", type=int, default=8090)
+    sd = sub.add_parser("seed-demo", help="симулированный домен corp.example для демо")
+    sd.add_argument("--db", default="data/demo.db")
+    a = p.parse_args()
+
+    if a.mode == "seed-demo":
+        store = Store(a.db)
+        demo.seed(store)
+        print(f"демо записано в {a.db} (домен {demo.DOMAIN}, 2 скана)")
+        return 0
+    if a.mode == "dashboard":
+        dashboard.serve(a.host, a.port, a.db)
+        return 0
+    if a.mode == "report":
+        print_report(Store(a.db), a.domain.lower(), sys.stdout.isatty() and not a.no_color, a.min_severity)
+        return 0
+    if a.mode == "diff":
+        d = Store(a.db).diff(a.domain.lower())
+        if not d:
+            print("нужно минимум два скана")
+            return 0
+        for title, items in (("новые хосты", d["new_hosts"]), ("исчезли", d["gone_hosts"])):
+            print(f"{title}: {', '.join(items) or '—'}")
+        for ch in d["ip_changes"]:
+            print(f"смена IP: {ch['host']}  {ch['old']} → {ch['new']}")
+        for f in d["new_findings"]:
+            print(f"+ [{f['severity']}] {f['host']}: {f['message']}")
+        for f in d["fixed_findings"]:
+            print(f"- [{f['severity']}] {f['host']}: {f['message']}")
+        return 0
+
+    # scan
+    if a.probe and not a.i_am_authorized:
+        print(LEGAL + "\nДобавьте --i-am-authorized, если это так.", file=sys.stderr)
+        return 2
+    print("режим: " + ("активный (--probe)" if a.probe else "пассивный: запросы только к crt.sh и DNS, цель не затрагивается"))
+    store = Store(a.db)
+    try:
+        result = pipeline.run_scan(a.domain, fetch_crtsh, DNSClient(), Prober() if a.probe else None, a.workers,
+                                   progress=lambda i, n: print(f"\r  хостов обработано: {i}/{n}", end="", file=sys.stderr))
+    except RuntimeError as e:
+        print(f"\nошибка: {e}", file=sys.stderr)
+        return 1
+    print(file=sys.stderr)
+    store.save(result)
+    print_report(store, result.domain, sys.stdout.isatty())
+    return 0
+
+
+sys.exit(main())
