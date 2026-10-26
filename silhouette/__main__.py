@@ -57,7 +57,7 @@ def main(argv=None):
     sc.add_argument("--i-am-authorized", action="store_true", help="подтверждение права проверять этот домен (нужно для --probe)")
     sc.add_argument("--workers", type=int, default=8)
     sc.add_argument("--fail-on", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если в скане есть находки не ниже порога")
-    sc.add_argument("--fail-on-new", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если появились новые находки не ниже порога (против прошлого скана)")
+    sc.add_argument("--fail-on-new", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если есть новые находки не ниже порога")
     sc.add_argument("--rps", type=float, default=5.0, help="предел активных проб в секунду (с --probe)")
     sc.add_argument("--no-cache", action="store_true", help="не использовать кэш ответов crt.sh")
     sc.add_argument("--cache-ttl", type=int, default=6 * 3600, help="срок жизни кэша crt.sh, секунды")
