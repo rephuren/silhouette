@@ -5,6 +5,7 @@ import sys
 
 from . import dashboard, demo, pipeline
 from .dnsclient import DNSClient
+from .gate import decide
 from .models import SEVERITY_ORDER
 from .probe import Prober
 from .sources import fetch_crtsh
@@ -39,6 +40,13 @@ def print_report(store, domain, color, min_severity="low"):
         print(c(DIM, "  технологии: " + ", ".join(f"{n} ×{k}" for n, k in sm["tech"][:10])))
 
 
+def gate(store, domain, fail_on, fail_on_new):
+    code, reasons = decide(store, domain, fail_on, fail_on_new)
+    for r in reasons:
+        print(f"порог превышен: {r}", file=sys.stderr)
+    return code
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="silhouette", description="Монитор внешней поверхности атаки")
     sub = p.add_subparsers(dest="mode", required=True)
@@ -48,6 +56,8 @@ def main(argv=None):
     sc.add_argument("--probe", action="store_true", help="активное зондирование: GET / и сертификат")
     sc.add_argument("--i-am-authorized", action="store_true", help="подтверждение права проверять этот домен (нужно для --probe)")
     sc.add_argument("--workers", type=int, default=8)
+    sc.add_argument("--fail-on", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если в скане есть находки не ниже порога")
+    sc.add_argument("--fail-on-new", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если появились новые находки не ниже порога (против прошлого скана)")
     sc.add_argument("--rps", type=float, default=5.0, help="предел активных проб в секунду (с --probe)")
     sc.add_argument("--no-cache", action="store_true", help="не использовать кэш ответов crt.sh")
     sc.add_argument("--cache-ttl", type=int, default=6 * 3600, help="срок жизни кэша crt.sh, секунды")
@@ -56,6 +66,8 @@ def main(argv=None):
     rp.add_argument("--db", default="data/silhouette.db")
     rp.add_argument("--min-severity", default="low", choices=SEVERITY_ORDER)
     rp.add_argument("--no-color", action="store_true")
+    rp.add_argument("--fail-on", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если в последнем скане есть находки не ниже порога")
+    rp.add_argument("--fail-on-new", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если в последнем скане появились новые находки не ниже порога")
     df = sub.add_parser("diff", help="что изменилось с прошлого скана")
     df.add_argument("domain")
     df.add_argument("--db", default="data/silhouette.db")
@@ -76,8 +88,9 @@ def main(argv=None):
         dashboard.serve(a.host, a.port, a.db)
         return 0
     if a.mode == "report":
-        print_report(Store(a.db), a.domain.lower(), sys.stdout.isatty() and not a.no_color, a.min_severity)
-        return 0
+        store = Store(a.db)
+        print_report(store, a.domain.lower(), sys.stdout.isatty() and not a.no_color, a.min_severity)
+        return gate(store, a.domain.lower(), a.fail_on, a.fail_on_new)
     if a.mode == "diff":
         d = Store(a.db).diff(a.domain.lower())
         if not d:
@@ -110,7 +123,7 @@ def main(argv=None):
     print(file=sys.stderr)
     store.save(result)
     print_report(store, result.domain, sys.stdout.isatty())
-    return 0
+    return gate(store, result.domain, a.fail_on, a.fail_on_new)
 
 
 if __name__ == "__main__":
