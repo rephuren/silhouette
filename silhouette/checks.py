@@ -57,7 +57,7 @@ def check_dns_host(name, dns_result):
 
 def check_dns_hardening(domain, dns_client):
     """DNSSEC (подпись зоны) и CAA (кому разрешено выпускать сертификаты). Только пассивные DNS-запросы к корню домена."""
-    out = []
+    out: list[Finding] = []
     status, keys = dns_client.lookup(domain, "DNSKEY")
     if status == "nxdomain":
         return out
