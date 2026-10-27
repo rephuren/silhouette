@@ -50,5 +50,5 @@ def run_scan(domain, source, dns_client, prober=None, workers=8, progress=None) 
             if progress:
                 progress(i, len(futures))
     result = ScanResult(domain=domain, started=started, finished=time.time(), probed=prober is not None, hosts=hosts)
-    result.domain_findings = checks.check_email(domain, dns_client)
+    result.domain_findings = checks.check_email(domain, dns_client) + checks.check_dns_hardening(domain, dns_client)
     return result
