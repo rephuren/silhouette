@@ -26,6 +26,10 @@ class FakeDNS:
             return ("ok", self.txt[name]) if name in self.txt else ("noanswer", [])
         if rtype == "MX":
             return ("ok", self.mx) if name == DOMAIN and self.mx else ("noanswer", [])
+        if rtype == "DNSKEY":
+            return ("ok", ["257 3 13 demo-key"]) if name == DOMAIN else ("noanswer", [])
+        if rtype == "CAA":
+            return ("ok", ['0 issue "letsencrypt.org"']) if name == DOMAIN else ("noanswer", [])
         entry = self.zone.get(name)
         if entry is None or entry == "NX":
             return "nxdomain", []

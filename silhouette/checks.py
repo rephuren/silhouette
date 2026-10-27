@@ -55,6 +55,38 @@ def check_dns_host(name, dns_result):
     return out
 
 
+def check_dns_hardening(domain, dns_client):
+    """DNSSEC (подпись зоны) и CAA (кому разрешено выпускать сертификаты). Только пассивные DNS-запросы к корню домена."""
+    out: list[Finding] = []
+    status, keys = dns_client.lookup(domain, "DNSKEY")
+    if status == "nxdomain":
+        return out
+    if status == "error":
+        out.append(Finding(INFO, "dnssec-unknown", "не удалось проверить DNSSEC: ошибка или таймаут DNS", domain))
+        dnssec_ok = None
+    elif keys:
+        dnssec_ok = True
+    else:
+        dnssec_ok = False
+        out.append(Finding(LOW, "dnssec-missing", "зона не подписана (нет DNSSEC): ответы DNS можно подменить на пути к клиенту", domain))
+    status, caa = dns_client.lookup(domain, "CAA")
+    if status == "error":
+        out.append(Finding(INFO, "caa-unknown", "не удалось проверить CAA: ошибка или таймаут DNS", domain))
+        caa_ok = None
+    elif not caa:
+        caa_ok = False
+        out.append(Finding(LOW, "caa-missing", "нет CAA-записей: сертификат для домена может выпустить любой центр сертификации", domain))
+    else:
+        caa_ok = True
+        issuers = [c for c in caa if " issue " in f" {c.lower()} " or c.lower().split(" ", 1)[-1].startswith("issue")]
+        if not issuers:
+            out.append(Finding(INFO, "caa-no-issue", "CAA есть, но без тега issue: ограничение выпуска сертификатов не задано", domain))
+            caa_ok = False
+    if dnssec_ok and caa_ok:
+        out.append(Finding(INFO, "dns-hardening-ok", "DNSSEC включён и CAA ограничивает выпуск сертификатов", domain))
+    return out
+
+
 def check_email(domain, dns_client):
     """SPF и DMARC корня домена."""
     out = []
