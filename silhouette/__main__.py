@@ -3,7 +3,7 @@ import functools
 import os
 import sys
 
-from . import dashboard, demo, pipeline
+from . import dashboard, demo, export, pipeline
 from .dnsclient import DNSClient
 from .gate import decide
 from .models import SEVERITY_ORDER
@@ -66,6 +66,8 @@ def main(argv=None):
     rp.add_argument("--db", default="data/silhouette.db")
     rp.add_argument("--min-severity", default="low", choices=SEVERITY_ORDER)
     rp.add_argument("--no-color", action="store_true")
+    rp.add_argument("--format", choices=export.FORMATS, default="text", help="text в терминал (по умолчанию), md или html в файл")
+    rp.add_argument("--output", metavar="ФАЙЛ", help="куда сохранить md/html (без этого пишется в stdout)")
     rp.add_argument("--fail-on", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если в последнем скане есть находки не ниже порога")
     rp.add_argument("--fail-on-new", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если в последнем скане появились новые находки не ниже порога")
     df = sub.add_parser("diff", help="что изменилось с прошлого скана")
@@ -89,7 +91,20 @@ def main(argv=None):
         return 0
     if a.mode == "report":
         store = Store(a.db)
-        print_report(store, a.domain.lower(), sys.stdout.isatty() and not a.no_color, a.min_severity)
+        if a.format == "text":
+            print_report(store, a.domain.lower(), sys.stdout.isatty() and not a.no_color, a.min_severity)
+        else:
+            data = export.collect(store, a.domain.lower(), a.min_severity)
+            if data is None:
+                print(f"по {a.domain} сканов нет", file=sys.stderr)
+                return 1
+            text = export.render(data, a.format)
+            if a.output:
+                with open(a.output, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                print(f"отчёт сохранён в {a.output}", file=sys.stderr)
+            else:
+                sys.stdout.write(text)
         return gate(store, a.domain.lower(), a.fail_on, a.fail_on_new)
     if a.mode == "diff":
         d = Store(a.db).diff(a.domain.lower())
