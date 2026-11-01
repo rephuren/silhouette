@@ -1,10 +1,11 @@
 """Выгрузка отчёта по последнему скану в один файл: Markdown или самодостаточный HTML."""
 import html
+import json
 import re
 
 from .models import SEVERITY_ORDER
 
-FORMATS = ("text", "md", "html")
+FORMATS = ("text", "md", "html", "json")
 
 CSS = (
     ":root{--bg:#050505;--panel:#0a0a0a;--line:#1a1a1a;--text:#e8e8e8;--dim:#8a8a8a;--red:#b3000f}"
@@ -81,7 +82,13 @@ def render_html(data):
     )
 
 
+def render_json(data):
+    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+
+
 def render(data, fmt):
+    if fmt == "json":
+        return render_json(data)
     if fmt == "md":
         return render_md(data)
     if fmt == "html":
