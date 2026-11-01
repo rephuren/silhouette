@@ -80,3 +80,34 @@ def test_cli_writes_file_and_stdout(db, tmp_path, capsys):
 def test_cli_missing_domain_and_gate_still_applies(db, capsys):
     assert main(["report", "none.example", "--db", db, "--format", "md"]) == 1
     assert main(["report", demo.DOMAIN, "--db", db, "--format", "md", "--fail-on", "info"]) == 3
+
+
+def test_json_roundtrips_and_matches_collect(db):
+    import json
+
+    data = data_for(db)
+    parsed = json.loads(export.render_json(data))
+    assert parsed["domain"] == demo.DOMAIN
+    assert parsed["summary"]["grade"] == data["summary"]["grade"]
+    assert [f["message"] for f in parsed["findings"]] == [f["message"] for f in data["findings"]]
+
+
+def test_json_keeps_cyrillic_and_respects_min_severity(db):
+    import json
+
+    assert "\\u" not in export.render_json(fake("кириллица"))
+    everything = json.loads(export.render_json(data_for(db, min_severity="info")))["findings"]
+    high_only = json.loads(export.render_json(data_for(db, min_severity="high")))["findings"]
+    assert len(high_only) < len(everything)
+    assert all(f["severity"] in ("critical", "high") for f in high_only)
+
+
+def test_cli_json_to_file_and_stdout(db, tmp_path, capsys):
+    import json
+
+    out = tmp_path / "r.json"
+    main(["report", demo.DOMAIN, "--db", db, "--format", "json", "--output", str(out)])
+    assert json.loads(out.read_text(encoding="utf-8"))["domain"] == demo.DOMAIN
+    capsys.readouterr()
+    main(["report", demo.DOMAIN, "--db", db, "--format", "json"])
+    assert json.loads(capsys.readouterr().out)["domain"] == demo.DOMAIN
