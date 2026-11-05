@@ -26,7 +26,7 @@ python3 -m venv .venv && .venv/bin/pip install .
 .venv/bin/silhouette scan example.org --probe --i-am-authorized  # с зондированием своего домена
 .venv/bin/silhouette report example.org --min-severity medium
 .venv/bin/silhouette report example.org --format html --output report.html   # или --format md | json, файл можно отправить человеку
-.venv/bin/silhouette diff example.org                           # что изменилось с прошлого скана
+.venv/bin/silhouette diff example.org                           # что изменилось с прошлого скана (--format json для скриптов)
 .venv/bin/silhouette dashboard                                  # http://127.0.0.1:8090
 .venv/bin/silhouette seed-demo --db data/demo.db                # симулированный домен для демо
 ```

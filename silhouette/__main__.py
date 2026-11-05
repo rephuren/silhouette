@@ -1,5 +1,6 @@
 import argparse
 import functools
+import json
 import os
 import sys
 
@@ -73,6 +74,7 @@ def main(argv=None):
     df = sub.add_parser("diff", help="что изменилось с прошлого скана")
     df.add_argument("domain")
     df.add_argument("--db", default="data/silhouette.db")
+    df.add_argument("--format", choices=("text", "json"), default="text")
     ds = sub.add_parser("dashboard", help="локальный веб-дашборд")
     ds.add_argument("--db", default="data/silhouette.db")
     ds.add_argument("--host", default="127.0.0.1")
@@ -108,6 +110,9 @@ def main(argv=None):
         return gate(store, a.domain.lower(), a.fail_on, a.fail_on_new)
     if a.mode == "diff":
         d = Store(a.db).diff(a.domain.lower())
+        if a.format == "json":
+            print(json.dumps(d or {"error": "нужно минимум два скана"}, ensure_ascii=False, indent=2))
+            return 0
         if not d:
             print("нужно минимум два скана")
             return 0
