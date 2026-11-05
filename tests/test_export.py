@@ -111,3 +111,19 @@ def test_cli_json_to_file_and_stdout(db, tmp_path, capsys):
     capsys.readouterr()
     main(["report", demo.DOMAIN, "--db", db, "--format", "json"])
     assert json.loads(capsys.readouterr().out)["domain"] == demo.DOMAIN
+
+
+def test_diff_json_cli(db, capsys):
+    import json
+
+    assert main(["diff", demo.DOMAIN, "--db", db, "--format", "json"]) == 0
+    d = json.loads(capsys.readouterr().out)
+    assert set(d) >= {"new_hosts", "gone_hosts", "ip_changes", "new_findings", "fixed_findings"}
+
+
+def test_diff_json_without_scans_reports_error(tmp_path, capsys):
+    import json
+
+    other = tmp_path / "empty.db"
+    assert main(["diff", "nobody.example", "--db", str(other), "--format", "json"]) == 0
+    assert "error" in json.loads(capsys.readouterr().out)
