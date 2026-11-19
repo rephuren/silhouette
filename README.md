@@ -27,6 +27,7 @@ python3 -m venv .venv && .venv/bin/pip install .
 .venv/bin/silhouette report example.org --min-severity medium
 .venv/bin/silhouette report example.org --format html --output report.html   # или --format md | json, файл можно отправить человеку
 .venv/bin/silhouette diff example.org                           # что изменилось с прошлого скана (--format json для скриптов)
+.venv/bin/silhouette meta ./docs-to-publish                     # метаданные файлов: автор, пути, GPS (--format json, --fail-on high)
 .venv/bin/silhouette dashboard                                  # http://127.0.0.1:8090
 .venv/bin/silhouette seed-demo --db data/demo.db                # симулированный домен для демо
 ```
@@ -50,6 +51,8 @@ python3 -m venv .venv && .venv/bin/pip install .
 | :-- | :-- |
 | **пассивный (по умолчанию)** | поддомены из логов Certificate Transparency (crt.sh), DNS-цепочки CNAME, **висячие CNAME и возможный захват поддомена** (GitHub Pages, Heroku, Azure, S3 и др.), внутренние адреса в публичном DNS, служебные имена (`jenkins`, `staging`, `grafana`…), SPF и DMARC корня домена, **DNSSEC** (подписана ли зона) и **CAA** (кто вправе выпускать сертификаты) |
 | **активный (`--probe`)** | один `GET /` и чтение сертификата: технологии и версии в духе WhatWeb, известные проблемные версии (например Apache 2.4.49), HSTS/CSP/clickjacking/cookie-флаги, просроченные и скоро истекающие сертификаты, «ничейные» страницы сервисов, служебные хосты, отвечающие из интернета |
+
+| **метаданные (`meta`)** | отдельная команда для собственных файлов перед публикацией: JPEG/EXIF (GPS, автор, камера, серийные номера, программа), docx/xlsx/pptx (автор, кто менял, организация, шаблон), PDF (Author, Creator, Producer); локальные пути вроде `C:\\Users\\имя` отмечаются отдельно. Без сети, без внешних программ, файлы не меняются |
 
 Результаты складываются в SQLite: оценка по хостам, граф связей хост → CNAME → IP, дифф между сканами.
 

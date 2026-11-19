@@ -4,7 +4,8 @@ import json
 import os
 import sys
 
-from . import dashboard, demo, export, pipeline
+from . import dashboard, demo, export, meta, pipeline
+from . import gate as gate_mod
 from .dnsclient import DNSClient
 from .gate import decide
 from .models import SEVERITY_ORDER
@@ -48,6 +49,29 @@ def gate(store, domain, fail_on, fail_on_new):
     return code
 
 
+def run_meta(a):
+    import os
+    if not os.path.exists(a.path):
+        print(f"нет такого пути: {a.path}", file=sys.stderr)
+        return 1
+    rows = meta.inspect_tree(a.path)
+    if a.format == "json":
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
+    else:
+        for row in rows:
+            print(row["file"])
+            for f in row["findings"]:
+                mark, _ = SEV_MARK[f["severity"]]
+                print(f"  {mark} {f['message']}")
+        if not rows:
+            print("метаданных, которые стоит убрать, не найдено")
+    hit = gate_mod.at_least([f for r in rows for f in r["findings"]], a.fail_on)
+    if hit:
+        print(f"порог превышен: находок не ниже {a.fail_on}: {len(hit)}", file=sys.stderr)
+        return gate_mod.EXIT_FINDINGS
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="silhouette", description="Монитор внешней поверхности атаки")
     sub = p.add_subparsers(dest="mode", required=True)
@@ -79,6 +103,10 @@ def main(argv=None):
     ds.add_argument("--db", default="data/silhouette.db")
     ds.add_argument("--host", default="127.0.0.1")
     ds.add_argument("--port", type=int, default=8090)
+    mt = sub.add_parser("meta", help="метаданные файлов (JPEG/EXIF, docx/xlsx/pptx, PDF): что они рассказывают о владельце")
+    mt.add_argument("path", help="файл или папка")
+    mt.add_argument("--format", choices=("text", "json"), default="text")
+    mt.add_argument("--fail-on", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если есть находки не ниже порога")
     sd = sub.add_parser("seed-demo", help="симулированный домен corp.example для демо")
     sd.add_argument("--db", default="data/demo.db")
     a = p.parse_args(argv)
@@ -88,6 +116,8 @@ def main(argv=None):
         demo.seed(store)
         print(f"демо записано в {a.db} (домен {demo.DOMAIN}, 2 скана)")
         return 0
+    if a.mode == "meta":
+        return run_meta(a)
     if a.mode == "dashboard":
         dashboard.serve(a.host, a.port, a.db)
         return 0
