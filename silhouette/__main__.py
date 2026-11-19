@@ -9,6 +9,7 @@ from . import gate as gate_mod
 from .dnsclient import DNSClient
 from .gate import decide
 from .models import SEVERITY_ORDER
+from .nuclei import Nuclei, NucleiError
 from .probe import Prober
 from .shodan import Shodan, ShodanError
 from .sources import fetch_crtsh
@@ -82,6 +83,7 @@ def main(argv=None):
     sc.add_argument("--probe", action="store_true", help="активное зондирование: GET / и сертификат")
     sc.add_argument("--i-am-authorized", action="store_true", help="подтверждение права проверять этот домен (нужно для --probe)")
     sc.add_argument("--shodan", action="store_true", help="пассивно спросить Shodan про порты и CVE на IP хостов (ключ в SHODAN_API_KEY)")
+    sc.add_argument("--nuclei", action="store_true", help="запустить установленный nuclei по отвечающим хостам (только с --probe --i-am-authorized)")
     sc.add_argument("--workers", type=int, default=8)
     sc.add_argument("--fail-on", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если в скане есть находки не ниже порога")
     sc.add_argument("--fail-on-new", choices=[*SEVERITY_ORDER, "none"], help="код возврата 3, если есть новые находки не ниже порога")
@@ -162,6 +164,16 @@ def main(argv=None):
     if a.probe and not a.i_am_authorized:
         print(LEGAL + "\nДобавьте --i-am-authorized, если это так.", file=sys.stderr)
         return 2
+    if a.nuclei and not (a.probe and a.i_am_authorized):
+        print("--nuclei отправляет на цель запросы по шаблонам уязвимостей: нужны --probe и --i-am-authorized.\n" + LEGAL, file=sys.stderr)
+        return 2
+    scanner = None
+    if a.nuclei:
+        try:
+            scanner = Nuclei(rps=a.rps)
+        except NucleiError as e:
+            print(f"ошибка: {e}", file=sys.stderr)
+            return 2
     intel = None
     if a.shodan:
         try:
@@ -174,7 +186,7 @@ def main(argv=None):
     try:
         cache_dir = None if a.no_cache else os.path.join(os.path.dirname(a.db) or ".", "cache")
         source = functools.partial(fetch_crtsh, cache_dir=cache_dir, cache_ttl=a.cache_ttl)
-        result = pipeline.run_scan(a.domain, source, DNSClient(), Prober(rps=a.rps) if a.probe else None, a.workers, intel=intel,
+        result = pipeline.run_scan(a.domain, source, DNSClient(), Prober(rps=a.rps) if a.probe else None, a.workers, intel=intel, scanner=scanner,
                                    progress=lambda i, n: print(f"\r  хостов обработано: {i}/{n}", end="", file=sys.stderr))
     except RuntimeError as e:
         print(f"\nошибка: {e}", file=sys.stderr)
